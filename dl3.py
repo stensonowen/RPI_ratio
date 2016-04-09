@@ -5,12 +5,8 @@ import sys, random, datetime
 def get_by_index(n):
     #Note: entries span n = 1 .. 10532
     #Note: generated 9703 the first time
+    #requests session object must be used to preserve session info 
     url = "http://prod3.server.rpi.edu/peopledirectory/entry.do?datasetName=directory&key=" + str(n)
-    s = requests.Session()
-    return s.get(url)
-
-def get_vcard(n):
-    url = "http://prod3.server.rpi.edu/peopledirectory/vcard.do?datasetName=directory&key=4242&nocache=no&skinName=vcard&contentType=text/directory&contentName={:n}.vcf".format(n)
     s = requests.Session()
     return s.get(url)
 
