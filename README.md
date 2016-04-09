@@ -8,4 +8,4 @@ I then looked up the probability of gender by first name [here](https://github.c
 
 There are about 5000 total records (3700 student records), meaning a fair portion of the student body was excluded because they weren't on the list of names (the list doesn't include double names or non-US names).  
 The student population is supposedly 34% female, which seems accurate and in line with the official numbers.
-Majors with poor ratios (with at least 100 data points) include CS/CSE (17%/16%) and Physics (18%); majors with more females include Bio (58%), Architecture (58%), and Biomedical Engineering (55%).  
+Majors with poor ratios (with at least 100 data points) include CS/CSE (17%/16%) and Physics (18%); majors with more women include Bio (58%), Architecture (58%), and Biomedical Engineering (55%).  
