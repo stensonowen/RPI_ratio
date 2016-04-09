@@ -23,8 +23,8 @@ def parse(html):
     last = ''
     d = {}
     for i in y:
-        if ':' in i:
-            last = i.replace(':', '')
+        if i[-1] == ':':
+            last = i[:-1]
             d[last] = ''
         elif last in d:
             d[last] += (i + " ")
