@@ -63,7 +63,8 @@ def main():
         if result[0]:   #only append results with a name
             people.append(result)
     print("Time: ", datetime.datetime.now() - start)
-    names = names_dict()
+    names = name_to_sex_p()
+    #names = names_dict()
     ratios = lookup_sex(people, names)
     #return ratios
     write_data(ratios, 'results.csv')
@@ -98,6 +99,30 @@ def names_dict():
     f.close()
     return d 
 
+def names_dict_(fn):
+    #data in the form "Name,frequency_percent,cumulative_freq,rank"
+    freq = {}
+    for line in open(fn, 'r'):
+        line = line.split()
+        freq[line[0]] = float(line[1])/100.
+    return freq
+
+def name_to_sex_p():
+    #data from https://www.census.gov/topics/population/genealogy/data/1990_census/1990_census_namefiles.html
+    (males, females) = ('dist.male.first', 'dist.female.first')
+    male_names = names_dict_(males)
+    female_names = names_dict_(females)
+    #names = set(male_names.keys() + female_names.keys())
+    names = set(list(male_names) + list(female_names))
+    p_female = {}
+    #generate p(female) for each name
+    for name in names:
+        #Bayes' theorem
+        m = (male_names.get(name) or 0.)
+        f = (female_names.get(name) or 0.)
+        p_female[name] = f / (m + f)
+    return p_female
+
 def lookup_sex(people, names):
     #probabilities expressed as ratio of Women:All (i.e. P(random person in this category is female))
     #0 = male-dominated, 1 = female-dominated, .5 = even
@@ -105,17 +130,21 @@ def lookup_sex(people, names):
         #d = dictionary of gender probabilities
         #   key = field (e.g. 'Math' or 'Administrator' or 'Sophomore')
         #   val = list: [probability, number of data points]
+    not_found = []
     for person in people:
         first_name = person[0].split()[0]
-        sex_p = names.get(first_name)
-        if not sex_p:
+        sex_p = names.get(first_name.upper())
+        #if not sex_p:
+        if sex_p == None:
+            #print(' <' + first_name + '>\t\t(' + person[0] + ')') 
+            not_found.append((first_name, person[0]))
             continue
         for x in person[1:]:
             old = d.get(x) or [0,0]
             old[0] += sex_p
             old[1] += 1
             d[x] = old
-    return d
+    return (d, not_found)[0]
 
 if __name__ == "__main__":
     main()
