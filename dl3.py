@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 import requests, bs4, re
 import sys, random, datetime
+from fractions import Fraction
 
 def get_by_index(n):
     #Note: entries span n = 1 .. 10532
@@ -62,12 +63,14 @@ def main():
         result = fetch(n)
         if result[0]:   #only append results with a name
             people.append(result)
-    print("Time: ", datetime.datetime.now() - start)
-    names = name_to_sex_p()
-    #names = names_dict()
+    print("Time Elapsed: ", datetime.datetime.now() - start)
+    print("People found: ", len(people))
+    names = names_to_sex_p2(['yob'+str(i)+'.txt' for i in range(1980,2000)], 'ss_names/')
+    print('Names on record: ', len(names))
     ratios = lookup_sex(people, names)
-    #return ratios
-    write_data(ratios, 'results.csv')
+    print('Names not found: ', len(ratios[1]))
+    write_data(ratios[0], 'results.csv')
+    #return (people, names, ratios[0], ratios[1])
 
 def write_data(ratios, fout):
     #write to csv file delimited by tabs/newlines
@@ -98,6 +101,55 @@ def names_dict():
             d[name] = 1.0 - float(p)
     f.close()
     return d 
+
+def names_to_sex_p2(years, folder=''):
+    #more data from https://www.ssa.gov/oact/babynames/names.zip
+    #(m_, f_) = dl3.names_to_sex_p2(['yob'+str(i)+'.txt' for i in range(1980,2000)], 'ss_names/')
+    #wget https://www.ssa.gov/oact/babynames/names.zip && unzip names.zip -d ss_names
+    #1980-1999 returns 58k name records
+    m_ = {} #overall averages
+    f_ = {}
+    t_ = 0
+    for y in years:
+        #yearly data
+        (f, m, t) = names_dict2(folder + str(y))
+        for i,j in f.items():
+            prev = f_.get(i) or 0
+            f_[i] = prev + Fraction(j,t)
+        for i,j in m.items():
+            prev = m_.get(i) or 0
+            m_[i] = prev + Fraction(j,t)
+        t_ += t
+    print('Total records: ', t_)
+    p_female = {}
+    for name in set(list(m_) + list(f_)):
+        m = (m_.get(name) or 0) #P(name|Man)
+        f = (f_.get(name) or 0)
+        p_female[name] = float(f / (m+f))
+    return p_female
+
+
+def names_dict2(fn):
+    #ss data source
+    #returns dictionaries of {name:count} for males and females, as well as total people 
+    m = {}
+    f = {}
+    total = 0
+    for l in open(fn, 'r'):
+        line = l.split(',')
+        name = line[0].upper()
+        count= int(line[2])
+        sex  = line[1].upper()
+        if sex == 'F':
+            f[name] = count
+            total += count
+        elif sex == 'M':
+            m[name] = count
+            total += count
+        else:
+            print('ERROR: UNKNWON LINE: <' + l + '>')
+    return (f, m, total)
+
 
 def names_dict_(fn):
     #data in the form "Name,frequency_percent,cumulative_freq,rank"
@@ -144,7 +196,7 @@ def lookup_sex(people, names):
             old[0] += sex_p
             old[1] += 1
             d[x] = old
-    return (d, not_found)[0]
+    return (d, not_found)
 
 if __name__ == "__main__":
     main()
