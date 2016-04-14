@@ -4,6 +4,7 @@ import sys, random, datetime
 from fractions import Fraction
 
 def get_by_index(n):
+    #Download RPI Directory page by index
     #Note: entries span n = 1 .. 10532
     #Note: generated 9703 the first time
     #requests session object must be used to preserve session info 
@@ -12,6 +13,8 @@ def get_by_index(n):
     return s.get(url)
 
 def parse(html):
+    #Convert RPI Directory html into dictionary of fields and values
+    #It's a little wonky, but the page formatting doesn't really lend itself to parsing
     soup = bs4.BeautifulSoup(html, "lxml")
     data = str(soup.find_all(attrs={'id': 'singleDirectoryEntry'}))
     data = data.replace('&amp;', '&')#what's the better way to do this?
@@ -34,6 +37,9 @@ def parse(html):
     return d
 
 def extract(data):
+    #extract relevant info from dictionary of directory data
+    #If the page is a student's, should return [name, 1, Major, Year]
+    #Otherwise, should return [name, 0, Position, Department]
     result = ['?', -1, '?', '?']
     result[0] = data.get('Name')
     if 'Class' in data:
@@ -47,30 +53,11 @@ def extract(data):
     return result
 
 def fetch(n):
+    #Get list of details based only on the index
     r = get_by_index(n)
     data = parse(r.text)
     details = extract(data)
     return details
-
-def main():
-    start = datetime.datetime.now()
-    people = []
-    for n in range(1,10532):
-    #for n in [random.randint(1,10532) for i in range(100)]:
-        #if n%200 == 0:
-        #    print(n)
-        #people.append(fetch(n))
-        result = fetch(n)
-        if result[0]:   #only append results with a name
-            people.append(result)
-    print("Time Elapsed: ", datetime.datetime.now() - start)
-    print("People found: ", len(people))
-    names = names_to_sex_p2(['yob'+str(i)+'.txt' for i in range(1980,2000)], 'ss_names/')
-    print('Names on record: ', len(names))
-    ratios = lookup_sex(people, names)
-    print('Names not found: ', len(ratios[1]))
-    write_data(ratios[0], 'results.csv')
-    #return (people, names, ratios[0], ratios[1])
 
 def write_data(ratios, fout):
     #write to csv file delimited by tabs/newlines
@@ -90,21 +77,11 @@ def write_data(ratios, fout):
         f.write(s)
     f.close()
 
-def names_dict():
-    d = {}
-    f = open('us-likelihood-of-gender-by-name-in-2014.csv', 'r')
-    for i in f:
-        [sex, name, p] = i.split(',')
-        if sex == 'F':
-            d[name] = float(p)
-        elif sex == 'M':
-            d[name] = 1.0 - float(p)
-    f.close()
-    return d 
-
-def names_to_sex_p2(years, folder=''):
+def names_to_probs(years, folder=''):
+    #calculates gender breakdown for each first name based on SSA data
+    #arg 1 is a list of the filenames for to search (e.g. "yob1946.txt")
+    #arg 2 is an optional folder these filenames reside in (including a slash)
     #more data from https://www.ssa.gov/oact/babynames/names.zip
-    #(m_, f_) = dl3.names_to_sex_p2(['yob'+str(i)+'.txt' for i in range(1980,2000)], 'ss_names/')
     #wget https://www.ssa.gov/oact/babynames/names.zip && unzip names.zip -d ss_names
     #1980-1999 returns 58k name records
     m_ = {} #overall averages
@@ -112,7 +89,7 @@ def names_to_sex_p2(years, folder=''):
     t_ = 0
     for y in years:
         #yearly data
-        (f, m, t) = names_dict2(folder + str(y))
+        (f, m, t) = names_dict(folder + str(y))
         for i,j in f.items():
             prev = f_.get(i) or 0
             f_[i] = prev + Fraction(j,t)
@@ -129,7 +106,7 @@ def names_to_sex_p2(years, folder=''):
     return p_female
 
 
-def names_dict2(fn):
+def names_dict(fn):
     #ss data source
     #returns dictionaries of {name:count} for males and females, as well as total people 
     m = {}
@@ -151,44 +128,21 @@ def names_dict2(fn):
     return (f, m, total)
 
 
-def names_dict_(fn):
-    #data in the form "Name,frequency_percent,cumulative_freq,rank"
-    freq = {}
-    for line in open(fn, 'r'):
-        line = line.split()
-        freq[line[0]] = float(line[1])/100.
-    return freq
-
-def name_to_sex_p():
-    #data from https://www.census.gov/topics/population/genealogy/data/1990_census/1990_census_namefiles.html
-    (males, females) = ('dist.male.first', 'dist.female.first')
-    male_names = names_dict_(males)
-    female_names = names_dict_(females)
-    #names = set(male_names.keys() + female_names.keys())
-    names = set(list(male_names) + list(female_names))
-    p_female = {}
-    #generate p(female) for each name
-    for name in names:
-        #Bayes' theorem
-        m = (male_names.get(name) or 0.)
-        f = (female_names.get(name) or 0.)
-        p_female[name] = f / (m + f)
-    return p_female
-
 def lookup_sex(people, names):
+    #calculate probability someone with a given name is female; populate dictionary of probabilities
+    #names not found were also tracked for testing purposes
     #probabilities expressed as ratio of Women:All (i.e. P(random person in this category is female))
     #0 = male-dominated, 1 = female-dominated, .5 = even
+    #return value is a tuple of the probability dictionary and the list of absent names
     d = {}
         #d = dictionary of gender probabilities
         #   key = field (e.g. 'Math' or 'Administrator' or 'Sophomore')
-        #   val = list: [probability, number of data points]
+        #   val = list: [probability, number of data points (i.e. names found in the database)]
     not_found = []
     for person in people:
         first_name = person[0].split()[0]
         sex_p = names.get(first_name.upper())
-        #if not sex_p:
         if sex_p == None:
-            #print(' <' + first_name + '>\t\t(' + person[0] + ')') 
             not_found.append((first_name, person[0]))
             continue
         for x in person[1:]:
@@ -197,6 +151,26 @@ def lookup_sex(people, names):
             old[1] += 1
             d[x] = old
     return (d, not_found)
+
+def main():
+    start = datetime.datetime.now()
+    people = []
+    for n in range(1,10532):
+    #for n in [random.randint(1,10532) for i in range(100)]:
+        #people.append(fetch(n))
+        result = fetch(n)
+        if result[0]:   #only append results with a name
+            people.append(result)
+    print("Time Elapsed: ", datetime.datetime.now() - start)
+    print("People found: ", len(people))
+    files = ['yob'+str(i)+'.txt' for i in range(1993,1998)] #name files pertinent to undergrads
+    names = names_to_probs(files, 'ss_names/')
+    print('Names on record: ', len(names))
+    ratios = lookup_sex(people, names)
+    print('Names not found: ', len(ratios[1]))
+    write_data(ratios[0], 'results.csv')
+    #return (people, names, ratios[0], ratios[1])
+
 
 if __name__ == "__main__":
     main()
