@@ -7,7 +7,7 @@ Data is scraped from the ["Rensselaer Directories"](http://rpinfo.rpi.edu/direct
 There are roughly 10k valid entries, of which 75% are records of students.
 
 I then looked up the probability of gender by first name. I got the data from [ssa.gov](https://www.ssa.gov/) ([here](https://www.ssa.gov/oact/babynames/names.zip) more specifically), which approximates the number of males and females born with each name each year.
-To set up this data so that it can be found by the script out of the box, run `wget https://www.ssa.gov/oact/babynames/names.zip && unzip names.zip -d ss_names`; otherwise it should be easy to change.
+To set up this data so that it can be found by the script out of the box, run `wget https://www.ssa.gov/oact/babynames/names.zip && unzip names.zip -d ss_names`; otherwise the code should be easy to change.
 
 Estimating the sex of someone by their name can be done using [Bayes' Theorem](https://en.wikipedia.org/wiki/Bayes'_theorem). The Social Security data gives us `P(someone had a given name | their gender)`; e.g. `P('James'|Male) = 22727/3660759` and `P('James'|Female) = 57/3660759` (in 1995). Therefore `P(Female|'James') = P('James'|Female) * P(Female) / P('James') = P('James'|Female) / (P('James'|Female) + P('James'|Male))`. Thus `P(Female|'James') = 57 / (57+22727) = .25%`. 
 
