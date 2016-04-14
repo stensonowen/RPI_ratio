@@ -1,4 +1,4 @@
-#results <- read.delim("results.csv")
+results <- read.csv("results.csv")
 annotated_barplot <- function(fields, title, fields_opt=fields, width=20){
   #args: "fields" = vector of rows which data in results.csv to use
   #      "title"  = title of the graph
