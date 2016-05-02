@@ -8,9 +8,13 @@ def get_by_index(n):
     #Note: entries span n = 1 .. 10532
     #Note: generated 9703 the first time
     #requests session object must be used to preserve session info 
-    url = "http://prod3.server.rpi.edu/peopledirectory/entry.do?datasetName=directory&key=" + str(n)
+    url = "http://prod3.server.rpi.edu/peopledirectory/entry.do"
+    params = {
+            'datasetName': 'directory',
+            'key': str(n)
+    }
     s = requests.Session()
-    return s.get(url)
+    return s.get(url, params=params)
 
 def parse(html):
     #Convert RPI Directory html into dictionary of fields and values
